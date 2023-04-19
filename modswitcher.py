@@ -12,6 +12,7 @@ import json
 import re
 import minecraft_freezer
 
+os.system("title Modswitcher Output")
 os.chdir(Path(__file__).parent)
 logs = Path('logs')
 if not logs.is_dir():
@@ -242,6 +243,7 @@ class EventHandler(FileSystemEventHandler):
             finally:
                 freezer.resume()
 
+# Start observer
 event_handler = EventHandler()
 observer = Observer()
 observer.schedule(event_handler, root, recursive=False)
@@ -251,6 +253,8 @@ observer.start()
 try:
     while True:
         time.sleep(1)
+except KeyboardInterrupt:
+    logging.fatal("Exited")
 except BaseException as e:
     logging.fatal(e)
 finally:
