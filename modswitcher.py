@@ -10,6 +10,7 @@ from datetime import datetime
 import time
 import json
 import re
+import minecraft_freezer
 
 os.chdir(Path(__file__).parent)
 logs = Path('logs')
@@ -27,7 +28,7 @@ while logfile.is_file():
     logfile = logs.joinpath(datetime.now().strftime('%Y-%m-%d-') + str(i) + '.log')
 
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 formatter = logging.Formatter('[%(asctime)s] [%(levelname)s]: %(message)s',
                                 datefmt='%H:%M:%S')
 
@@ -50,14 +51,28 @@ if root == None:
     logger.fatal('Could not find minecraft game directory')
     exit()
 logger.info(f'Found .minecraft at "{root}"')
+
+# Create freezer
+freezer = minecraft_freezer.Freezer(str(root))
+
 # Get mods directory
-mods_dir = Path(root).joinpath('mods')
+mods_dir = root.joinpath('mods')
 if not mods_dir.is_dir():
     logger.fatal('mods folder does not exist, no point in running')
     exit()
 logger.info(f'Found mods folder at "{mods_dir}"')
+# Get profiles directory
+profiles_dir = mods_dir.joinpath('profiles')
+if not mods_dir.is_dir():
+    logger.info('Profiles folder does not exist, attempting to create')
+    try:
+        os.mkdir(profiles_dir)
+    except:
+        logger.fatal(f'Could not create profiles folder {profiles_dir}')
+        exit()
+logger.info(f'Found profiles folder at "{profiles_dir}"')
 # Get config
-config_path = mods_dir.joinpath('.modswitcher.json')
+config_path = profiles_dir.joinpath('modswitcher.json')
 if not config_path.exists():
     try:
         # Create default config
@@ -70,7 +85,6 @@ if not config_path.exists():
     except:
         logger.fatal(f'Could not create default config {config_path}')
         exit()
-
 
 # Get launcher profiles file
 launcher_profiles_path = Path(root).joinpath('launcher_profiles.json')
@@ -109,7 +123,7 @@ def move_jars(src: Path, dest: Path, contents: list[str]):
 def load_profile(profile: str, contents: list[str]):
     # Move all .jar files from profile directory to mods directory and update selected_profile
     logger.info(f'Loading "{profile}"')
-    profile_dir = mods_dir.joinpath(profile)
+    profile_dir = profiles_dir.joinpath(profile)
     move_jars(profile_dir, mods_dir, contents)
     # Update selected profile
     try:
@@ -126,7 +140,7 @@ def load_profile(profile: str, contents: list[str]):
 def unload_profile(profile: str, contents: list[str]):
     # Move all .jar files from mods directory to profile directory
     logger.info(f'Unloading "{profile}"')
-    profile_dir = mods_dir.joinpath(profile)
+    profile_dir = profiles_dir.joinpath(profile)
     if not profile_dir.is_dir():
         logger.info(f'"{profile_dir}" does not exist, attempting to create')
         try:
@@ -160,17 +174,31 @@ def launch(profile_name: str):
     if new_profile == selected_profile:
         logger.info('Profile is already loaded, doing nothing')
         return
-    if not mods_dir.joinpath(new_profile).is_dir():
+    if not profiles_dir.joinpath(new_profile).is_dir():
         logging.error(f'"{new_profile}" does not exist, unable to load')
         return
     try:
-        mods_to_unload = os.listdir(Path(mods_dir))
-        mods_to_load = os.listdir(Path(mods_dir).joinpath(new_profile))
+        mods_to_unload = os.listdir(mods_dir)
+        mods_to_load = os.listdir(profiles_dir.joinpath(new_profile))
         unload_profile(selected_profile, mods_to_unload)
         load_profile(new_profile, mods_to_load)
     except IOError:
         pass
     return
+
+def parse_time(last_used: str) -> int:
+    logging.debug(f'Parsing lastUsed time "{last_used}"')
+    lengths = [4, 2, 2, 2, 2, 2, 3]
+    params = [int(last_used[sum(lengths[:i])+i:sum(lengths[:i+1])+i]) for i in range(len(lengths))]
+    logging.debug(f'Extracted params "{params}"')
+    params[6] *= 1000
+    dt = datetime(*params)
+    if dt == datetime(1970, 1, 1, 0, 0, 0, 0):
+        logging.debug(f'Profile has never been launched')
+        return 0
+    timestamp = int(time.mktime(dt.timetuple()))
+    logging.debug(f'"{last_used}" as a unix timestamp is {timestamp}')
+    return timestamp
 
 # Watchdog
 class EventHandler(FileSystemEventHandler):
@@ -189,19 +217,6 @@ class EventHandler(FileSystemEventHandler):
                 f.write(text)
             profiles = json.loads(text)['profiles']
             logger.info('Finding latest profile')
-            def parse_time(last_used: str) -> int:
-                logging.debug(f'Parsing lastUsed time "{last_used}"')
-                lengths = [4, 2, 2, 2, 2, 2, 3]
-                params = [int(last_used[sum(lengths[:i])+i:sum(lengths[:i+1])+i]) for i in range(len(lengths))]
-                logging.debug(f'Extracted params "{params}"')
-                params[6] *= 1000
-                dt = datetime(*params)
-                if dt == datetime(1970, 1, 1, 0, 0, 0, 0):
-                    logging.debug(f'Profile has never been launched')
-                    return 0
-                timestamp = int(time.mktime(dt.timetuple()))
-                logging.debug(f'"{last_used}" as a unix timestamp is {timestamp}')
-                return timestamp
             # Find latest profile
             latest_profile: str|None = None
             latest_time = 0.0
@@ -221,7 +236,11 @@ class EventHandler(FileSystemEventHandler):
                 logging.error("Could not find the latest profile")
                 return
             logging.info(f'Found latest profile "{latest_profile}" AKA "{profiles[latest_profile]["name"]}"')
-            launch(profiles[latest_profile]["name"])
+            try:
+                freezer.suspend()
+                launch(profiles[latest_profile]["name"])
+            finally:
+                freezer.resume()
 
 event_handler = EventHandler()
 observer = Observer()

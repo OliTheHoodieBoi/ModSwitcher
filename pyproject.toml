@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "minecraft mod switcher"
+version = "0.1.0"
+description = ""
+authors = ["Oli"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+watchdog = "^3.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
