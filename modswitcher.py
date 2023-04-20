@@ -19,6 +19,7 @@ if not logs.is_dir():
         os.mkdir(logs)
     except IOError:
         print('Could not create logs directory')
+        ctypes.windll.user32.MessageBoxW(0, 'Mod switcher was unable to complete startup.\nCould not create logs directory', Path(__file__).name, 16)
         exit()
 
 i = 0
@@ -40,6 +41,15 @@ console_handler = logging.StreamHandler(stdout)
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
+def exit_startup(message: str|None):
+    if message:
+        logger.fatal("Unable to complete startup:", message)
+        ctypes.windll.user32.MessageBoxW(0, 'Mod switcher was unable to complete startup.\n' + message, Path(__file__).name, 16)
+    else:
+        logger.fatal("Unable to complete startup")
+        ctypes.windll.user32.MessageBoxW(0, 'Mod switcher was unable to complete startup.', Path(__file__).name, 16)
+    exit()
+
 # Get .minecraft directory
 root = None
 appdata = os.getenv('APPDATA')
@@ -48,8 +58,7 @@ if appdata != None:
     if not root.is_dir():
         root = None
 if root == None:
-    logger.fatal('Could not find minecraft game directory')
-    exit()
+    exit_startup('Could not find minecraft game directory')
 logger.info(f'Found .minecraft at "{root}"')
 
 # Create freezer
@@ -58,8 +67,7 @@ freezer = minecraft_freezer.Freezer(str(root))
 # Get mods directory
 mods_dir = root.joinpath('mods')
 if not mods_dir.is_dir():
-    logger.fatal('mods folder does not exist, no point in running')
-    exit()
+    exit_startup("Folder 'mods' does not exist, no point in running")
 logger.info(f'Found mods folder at "{mods_dir}"')
 # Get profiles directory
 profiles_dir = mods_dir.joinpath('profiles')
@@ -68,8 +76,7 @@ if not mods_dir.is_dir():
     try:
         os.mkdir(profiles_dir)
     except:
-        logger.fatal(f'Could not create profiles folder {profiles_dir}')
-        exit()
+        exit_startup(f'Could not create profiles folder {profiles_dir}')
 logger.info(f'Found profiles folder at "{profiles_dir}"')
 # Get config
 config_path = profiles_dir.joinpath('modswitcher.json')
@@ -83,15 +90,13 @@ if not config_path.exists():
                     "profiles": {}
                 }, f, indent=2)
     except:
-        logger.fatal(f'Could not create default config {config_path}')
-        exit()
+        exit_startup(f'Could not create default config {config_path}')
 
 # Get launcher profiles file
 launcher_profiles_path = Path(root).joinpath('launcher_profiles.json')
 
 if not launcher_profiles_path.is_file():
-    logger.fatal(f'"{launcher_profiles_path}" does not exist')
-    exit()
+    exit_startup(f'"{launcher_profiles_path}" does not exist')
 
 launcher_profiles_old_path = Path(root).joinpath('launcher_profiles.json_old')
 with open(launcher_profiles_path, 'r') as f:
