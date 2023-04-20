@@ -12,6 +12,7 @@ import json
 import re
 import minecraft_freezer
 
+os.system("title Modswitcher Output")
 os.chdir(Path(__file__).parent)
 logs = Path('logs')
 if not logs.is_dir():
@@ -86,11 +87,11 @@ if not config_path.exists():
         logger.info(f'"{config_path}" does not exist, creating default config')
         with open(config_path, "x") as f:
             json.dump({
-                    "selected_profile": "default",
                     "profiles": {}
                 }, f, indent=2)
     except:
         exit_startup(f'Could not create default config {config_path}')
+selected_profiles_path = profiles_dir.joinpath(".selected_profile")
 
 # Get launcher profiles file
 launcher_profiles_path = Path(root).joinpath('launcher_profiles.json')
@@ -132,15 +133,12 @@ def load_profile(profile: str, contents: list[str]):
     move_jars(profile_dir, mods_dir, contents)
     # Update selected profile
     try:
-        with open(config_path, 'r') as f:
-            config = json.load(f)
-            config['selected_profile'] = profile
-        with open(config_path, 'w') as f:
-            json.dump(config, f, indent=2)
+        with open(selected_profiles_path, 'w') as f:
+            f.write(profile)
             logger.info('Updated selected profile')
-    except:
+    except BaseException as e:
         logger.fatal('Could not update selected profile')
-        raise IOError
+        raise e
 
 def unload_profile(profile: str, contents: list[str]):
     # Move all .jar files from mods directory to profile directory
@@ -150,10 +148,20 @@ def unload_profile(profile: str, contents: list[str]):
         logger.info(f'"{profile_dir}" does not exist, attempting to create')
         try:
             os.mkdir(profile_dir)
-        except IOError:
+        except BaseException as e:
             logger.error(f'Could not create "{profile_dir}"')
-            raise IOError
+            raise e
     move_jars(mods_dir, profile_dir, contents)
+
+def get_selected_profile():
+    if selected_profiles_path.exists():
+        with open(selected_profiles_path, "r") as f:
+            return f.read()
+    else:
+        with open(selected_profiles_path, "w") as f:
+            f.write("default")
+        return "default"
+
 
 def launch(profile_name: str):
     logger.info(f'Minecraft profile launched: "{profile_name}"')
@@ -163,8 +171,10 @@ def launch(profile_name: str):
     except:
         logger.error('Could not get config')
         return
-    selected_profile = config['selected_profile']
+    # Get selected profile
+    selected_profile = get_selected_profile()
     logger.info(f'Previous profile: "{selected_profile}"')
+
     profiles = config['profiles']
     new_profile = "default"
     for pattern in profiles:
@@ -242,11 +252,14 @@ class EventHandler(FileSystemEventHandler):
                 return
             logging.info(f'Found latest profile "{latest_profile}" AKA "{profiles[latest_profile]["name"]}"')
             try:
+                logging.info("Freezing Minecraft")
                 freezer.suspend()
                 launch(profiles[latest_profile]["name"])
             finally:
+                logging.info("Unfreezing Minecraft")
                 freezer.resume()
 
+# Start observer
 event_handler = EventHandler()
 observer = Observer()
 observer.schedule(event_handler, root, recursive=False)
@@ -256,6 +269,8 @@ observer.start()
 try:
     while True:
         time.sleep(1)
+except KeyboardInterrupt:
+    logging.fatal("Exited")
 except BaseException as e:
     logging.fatal(e)
 finally:
