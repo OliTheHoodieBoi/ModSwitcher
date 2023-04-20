@@ -72,7 +72,7 @@ if not mods_dir.is_dir():
 logger.info(f'Found mods folder at "{mods_dir}"')
 # Get profiles directory
 profiles_dir = mods_dir.joinpath('profiles')
-if not mods_dir.is_dir():
+if not profiles_dir.is_dir():
     logger.info('Profiles folder does not exist, attempting to create')
     try:
         os.mkdir(profiles_dir)
