@@ -11,8 +11,10 @@ import time
 import json
 import re
 import minecraft_freezer
+import pystray
+from PIL import Image
 
-os.system("title Modswitcher Output")
+os.system("title Mod switcher")
 os.chdir(Path(__file__).parent)
 logs = Path('logs')
 if not logs.is_dir():
@@ -254,18 +256,29 @@ class EventHandler(FileSystemEventHandler):
                 logging.info("Unfreezing Minecraft")
                 freezer.resume()
 
-# Start observer
+# Configure observer
 event_handler = EventHandler()
 observer = Observer()
 observer.schedule(event_handler, root, recursive=False)
 logger.info(f'Starting watch of launcher profiles at "{launcher_profiles_path}"')
 observer.start()
 
+# Configure icon
+icon = Image.open("icon.ico")
+def open_mods():
+    os.system(f'explorer "{mods_dir.absolute()}"')
+def exit_app(icon):
+    logging.fatal("Exited with tray icon")
+    icon.stop()
+app = pystray.Icon("Mod switcher", icon, menu=pystray.Menu(
+    pystray.MenuItem("Open mods folder", open_mods),
+    pystray.MenuItem("Exit", exit_app)
+))
+
 try:
-    while True:
-        time.sleep(1)
+    app.run()
 except KeyboardInterrupt:
-    logging.fatal("Exited")
+    logging.fatal("Exited with KeyboardInterrupt")
 except BaseException as e:
     logging.fatal(e)
 finally:
