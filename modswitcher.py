@@ -275,7 +275,7 @@ def open_mods():
 def exit_app(icon):
     logging.fatal("Exited with tray icon")
     icon.stop()
-app = pystray.Icon("Mod switcher", icon, menu=pystray.Menu(
+app = pystray.Icon(name="modswitcher", title="Mod switcher", icon=icon, menu=pystray.Menu(
     pystray.MenuItem("Open mods folder", open_mods),
     pystray.MenuItem("Exit", exit_app)
 ))
