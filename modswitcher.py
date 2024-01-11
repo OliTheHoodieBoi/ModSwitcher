@@ -2,6 +2,7 @@ import logging
 from sys import stdout
 from pathlib import Path
 import os
+import subprocess
 import shutil
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileModifiedEvent
@@ -271,10 +272,10 @@ observer.start()
 # Configure icon
 icon = Image.open("icon.ico")
 def open_mods():
-    os.system(f'explorer "{mods_dir.absolute()}"')
-def exit_app(icon):
+    subprocess.call(f'explorer "{mods_dir.absolute()}"', shell=True)
+def exit_app():
     logging.fatal("Exited with tray icon")
-    icon.stop()
+    app.stop()
 app = pystray.Icon(name="modswitcher", title="Mod switcher", icon=icon, menu=pystray.Menu(
     pystray.MenuItem("Open mods folder", open_mods),
     pystray.MenuItem("Exit", exit_app)
