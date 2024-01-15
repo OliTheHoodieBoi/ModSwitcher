@@ -273,11 +273,14 @@ observer.start()
 icon = Image.open("icon.ico")
 def open_mods():
     subprocess.call(f'explorer "{mods_dir.absolute()}"', shell=True)
+def open_log():
+    subprocess.call(f'explorer "{logs.absolute()}"', shell=True)
 def exit_app():
     logging.fatal("Exited with tray icon")
     app.stop()
 app = pystray.Icon(name="modswitcher", title="Mod switcher", icon=icon, menu=pystray.Menu(
     pystray.MenuItem("Open mods folder", open_mods),
+    pystray.MenuItem("Show logs", open_log),
     pystray.MenuItem("Exit", exit_app)
 ))
 
