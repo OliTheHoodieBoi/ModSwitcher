@@ -84,16 +84,6 @@ if not profiles_dir.is_dir():
 logger.info(f'Found profiles folder at "{profiles_dir}"')
 # Get config
 config_path = profiles_dir.joinpath('modswitcher.json')
-if not config_path.exists():
-    try:
-        # Create default config
-        logger.info(f'"{config_path}" does not exist, creating default config')
-        with open(config_path, "x") as f:
-            json.dump({
-                    "profiles": {}
-                }, f, indent=2)
-    except:
-        exit_startup(f'Could not create default config {config_path}')
 selected_profiles_path = profiles_dir.joinpath(".selected_profile")
 
 # Get launcher profiles file
@@ -168,32 +158,30 @@ def get_selected_profile():
 
 def launch(profile_name: str):
     logger.info(f'Minecraft profile launched: "{profile_name}"')
+    new_profile = "default"
     try:
         with open(config_path, 'r') as f:
             config = json.load(f)
+        profiles = config['profiles']
+        for pattern in profiles:
+            logger.debug(f'Matching "{profile_name}" against "{pattern}"')
+            match = re.match(pattern, profile_name)
+            if match:
+                profile = profiles[pattern]
+                logger.info(f'Found match against "{pattern}" for profile "{profile}"')
+                new_profile = profile
+                break
     except:
-        logger.error('Could not get config')
-        return
+        new_profile = profile_name
     # Get selected profile
     selected_profile = get_selected_profile()
     logger.info(f'Previous profile: "{selected_profile}"')
 
-    profiles = config['profiles']
-    new_profile = "default"
-    for pattern in profiles:
-        logger.debug(f'Matching "{profile_name}" against "{pattern}"')
-        match = re.match(pattern, profile_name)
-        if match:
-            profile = profiles[pattern]
-            logger.info(f'Found match against "{pattern}" for profile "{profile}"')
-            new_profile = profile
-            break
+    if new_profile.strip() == "" or not profiles_dir.joinpath(new_profile).is_dir():
+        new_profile = 'default'
     logger.info(f'Mods profile being launched is "{new_profile}"')
     if new_profile == selected_profile:
         logger.info('Profile is already loaded, doing nothing')
-        return
-    if not profiles_dir.joinpath(new_profile).is_dir():
-        logging.error(f'"{new_profile}" does not exist, unable to load')
         return
     try:
         mods_to_unload = os.listdir(mods_dir)
@@ -269,7 +257,7 @@ observer.schedule(event_handler, root, recursive=False)
 logger.info(f'Starting watch of launcher profiles at "{launcher_profiles_path}"')
 observer.start()
 
-# Configure icon
+# Configure iconr
 icon = Image.open("icon.ico")
 def open_mods():
     subprocess.call(f'explorer "{mods_dir.absolute()}"', shell=True)

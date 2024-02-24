@@ -1,21 +1,32 @@
 # Minecraft mod switcher
 
-Mod switcher automatically changes your Minecraft mods folder between different profiles when you launch the game.
+Mod switcher automatically changes the mods in the mods folder when you launch the game.
+
+## Profiles
+
+A "mod profile" is a folder in `.minecraft/mods/profiles` that contains a set of mods that are to be used with a certain profile from the Minecraft launcher. When a mod profile is launched all mods currently in the mods folder will be moved back to their corresponding mod profile folder and all mods in the launched mod profile folder will be moved into the mods folder.
 
 ## Config
 
-The mod switcher is configured in the `modswitcher.json` file in the profiles folder that is automatically created the first time you run the program.
+Mod switcher can optionally be configured by creating/editing the file `modswitcher.json` in the profiles folder.
 
-When Minecraft is started the launcher profile name will be attempted to be matched against the **keys** of the profiles object starting from the top. Keys should be a [regex](https://en.wikipedia.org/wiki/Regular_expression). When a match is found of the **value** of the item is the folder in the profiles directory that mods will be moved from.
+### Behaviour without config
 
-### Example config
+When Minecraft is started the launcher profile name will be matched against a folder in the profiles directory. If there is no folder with the same name as the launcher profile the `default` profile will be launched instead.
 
-When the profile `Fabric 1.19.4` is started from the Minecraft launcher mods will be moved out of the `mods` folder to the profile that they came from and mods in the `profiles/Fabric` folder will be moved to the `mods` folder.
+### Behaviour with config
+
+When Minecraft is started the launcher profile name will be attempted to be matched against the [regex](https://en.wikipedia.org/wiki/Regular_expression) **keys** of the profiles object starting from the top. If a match is found of the **value** of the pair is used as the profile to be launched. If no match is found the `default` profile is launched.
+
+### Example configuration
+
+When the launcher profile `Fabric 1.20.4` is started from the Minecraft launcher all the mods will be moved out of the `mods` folder and back to their mod profile folder and mods in the `profiles/Fabric 1.20` folder will be moved to the `mods` folder. Note that the periods (`.`) are escaped with a backslash (`\`) because `Fabric 1\.20.\.4` is a regex and in regex `.` matches any character, not just periods (`.`).
 
 ```json
 {
   profiles: {
-    "Fabric 1\.19\.4": "Fabric"
+    "Fabric 1\.20\.4": "Fabric 1.20",
+    "Vanilla+": "VanillaPlus"
   }
 }
 ```
