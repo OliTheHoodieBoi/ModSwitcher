@@ -3,19 +3,19 @@ from pystray import Icon as tray_icon, Menu, MenuItem
 from pystray._base import Icon
 from PIL import Image
 
-from logger import CustomLogger
+from logger import LogWrapper
 from pathlib import Path
 
 
 class TrayIcon:
     app: Icon
-    logger: CustomLogger
+    logger: LogWrapper
     icon: Image.Image | None
     mods_dir: Path | None
 
     def __init__(
         self,
-        logger: CustomLogger,
+        logger: LogWrapper,
         name: str = "modswitcher",
         title: str = "Mod switcher",
         icon: str | Path | Image.Image | None = None,

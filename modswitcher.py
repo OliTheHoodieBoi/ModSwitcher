@@ -11,41 +11,15 @@ import json
 import re
 import minecraft_freezer
 
-os.system("title Mod switcher")
-os.chdir(Path(__file__).parent)
-)
 
 
-def exit_startup(message: str | None):
-    if message:
-        logger.fatal("Unable to complete startup:", message)
-        ctypes.windll.user32.MessageBoxW(
-            0,
-            "Mod switcher was unable to complete startup.\n" + message,
-            Path(__file__).name,
-            16,
-        )
-    else:
-        logger.fatal("Unable to complete startup")
-        ctypes.windll.user32.MessageBoxW(
-            0, "Mod switcher was unable to complete startup.", Path(__file__).name, 16
-        )
-    exit()
 
 
-# Get .minecraft directory
-root = None
-appdata = os.getenv("APPDATA")
-if appdata != None:
-    root = Path(appdata).joinpath(".minecraft")
-    if not root.is_dir():
-        root = None
-if root == None:
-    exit_startup("Could not find minecraft game directory")
-logger.info(f'Found .minecraft at "{root}"')
 
-# Create freezer
-freezer = minecraft_freezer.Freezer(str(root))
+
+
+
+
 
 # Get mods directory
 mods_dir = root.joinpath("mods")
